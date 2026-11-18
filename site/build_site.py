@@ -9,7 +9,9 @@ from PIL import Image
 
 SRC = Path(sys.argv[1] if len(sys.argv) > 1 else "/mnt/project-files")
 HERE = Path(__file__).resolve().parent
-OUT = HERE.parent / "docs"
+DOCS = HERE.parent / "docs"
+# optional third argument: folder of the repo that serves the site (the redraftstudio.github.io checkout)
+OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else DOCS
 DOMAIN = HERE / "domain.txt"  # custom domain, e.g. redraftstudio.com; leave the file out to use the GitHub address
 BASE = f"https://{DOMAIN.read_text().strip()}/" if DOMAIN.exists() else "https://bangreedy-2.github.io/DPF/"
 G = "https://redraftstudio.gumroad.com/l/"
@@ -117,12 +119,14 @@ def jpg(src, dst, w=1200):
     im.save(dst, "JPEG", quality=82, optimize=True)
 
 def main():
-    if OUT.exists():
-        shutil.rmtree(OUT)
-    OUT.mkdir()
+    OUT.mkdir(exist_ok=True)
+    for old in OUT.iterdir():  # clear the last build but keep the git folder
+        if old.name == ".git":
+            continue
+        shutil.rmtree(old) if old.is_dir() else old.unlink()
     (OUT / "style.css").write_text(CSS)
     (OUT / ".nojekyll").write_text("")
-    if DOMAIN.exists():
+    if DOMAIN.exists() and not DOMAIN.read_text().strip().endswith(".github.io"):
         (OUT / "CNAME").write_text(DOMAIN.read_text().strip() + "\n")
     urls, cards, frees = [""], [], []
     for slug, folder, title, pitch, price, pid, fname, fid in P:
@@ -196,7 +200,15 @@ def main():
     (OUT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
         + "".join(f"<url><loc>{BASE}{u}</loc></url>" for u in urls) + "</urlset>")
     (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {BASE}sitemap.xml\n")
-    print("built", len(urls), "pages")
+    if OUT != DOCS:  # the old address forwards every page to the new one
+        shutil.rmtree(DOCS, ignore_errors=True)
+        for u in urls:
+            f = DOCS / u / "index.html"
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(f'<!doctype html><meta charset="utf-8"><title>Redraft Studio</title><link rel="canonical" href="{BASE}{u}">'
+                         f'<meta http-equiv="refresh" content="0; url={BASE}{u}"><a href="{BASE}{u}">Redraft Studio has moved here</a>')
+        (DOCS / ".nojekyll").write_text("")
+    print("built", len(urls), "pages into", OUT)
 
 if __name__ == "__main__":
     main()

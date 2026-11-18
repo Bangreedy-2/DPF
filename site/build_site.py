@@ -10,7 +10,8 @@ from PIL import Image
 SRC = Path(sys.argv[1] if len(sys.argv) > 1 else "/mnt/project-files")
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parent / "docs"
-BASE = "https://bangreedy-2.github.io/DPF/"
+DOMAIN = HERE / "domain.txt"  # custom domain, e.g. redraftstudio.com; leave the file out to use the GitHub address
+BASE = f"https://{DOMAIN.read_text().strip()}/" if DOMAIN.exists() else "https://bangreedy-2.github.io/DPF/"
 G = "https://redraftstudio.gumroad.com/l/"
 UTM = "?utm_source=site&utm_medium=landing&utm_campaign="
 
@@ -121,6 +122,8 @@ def main():
     OUT.mkdir()
     (OUT / "style.css").write_text(CSS)
     (OUT / ".nojekyll").write_text("")
+    if DOMAIN.exists():
+        (OUT / "CNAME").write_text(DOMAIN.read_text().strip() + "\n")
     urls, cards, frees = [""], [], []
     for slug, folder, title, pitch, price, pid, fname, fid in P:
         store = SRC / folder / "marketing" / "store"

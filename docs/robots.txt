@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://bangreedy-2.github.io/DPF/sitemap.xml
